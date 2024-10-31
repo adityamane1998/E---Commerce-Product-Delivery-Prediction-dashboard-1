@@ -1,151 +1,92 @@
 import streamlit as st
 import pandas as pd
-import math
-from pathlib import Path
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, classification_report, confusion_matrix
 
-# Set the title and favicon that appear in the Browser's tab bar.
-st.set_page_config(
-    page_title='GDP dashboard',
-    page_icon=':earth_americas:', # This is an emoji shortcode. Could be a URL too.
-)
+# Title and Description
+st.title("E-Commerce Product Delivery Prediction")
+st.write("""
+This app predicts whether a product delivery will be on-time or delayed using machine learning.
+Upload your dataset to get started!
+""")
 
-# -----------------------------------------------------------------------------
-# Declare some useful functions.
+# Upload CSV File
+uploaded_file = st.file_uploader("/content/drive/MyDrive/Colab Notebooks/Capstone Project /E - Commerce_Product_Delivery_Model_Implementation_Evaluation.csv", type="csv")
+uploaded_file = st.file_uploader("/content/drive/MyDrive/Colab Notebooks/Capstone Project /E - Commerce_Product_Delivery_Prediction_1.csv", type="csv")
+uploaded_file = st.file_uploader("/content/drive/MyDrive/Colab Notebooks/Capstone Project /E - Commerce_Product_Delivery_Prediction_Data.csv", type="csv")
 
-@st.cache_data
-def get_gdp_data():
-    """Grab GDP data from a CSV file.
+if uploaded_file is not None:
+    # Load data
+    df = pd.read_csv(/content/drive/MyDrive/Colab Notebooks/Capstone Project /E - Commerce_Product_Delivery_Model_Implementation_Evaluation.csv)
+    df = pd.read_csv(/content/drive/MyDrive/Colab Notebooks/Capstone Project /E - Commerce_Product_Delivery_Prediction_1.csv)
+    df = pd.read_csv(/content/drive/MyDrive/Colab Notebooks/Capstone Project /E - Commerce_Product_Delivery_Prediction_Data.csv)
+    st.write("Data Preview:", df.head())
 
-    This uses caching to avoid having to read the file every time. If we were
-    reading from an HTTP endpoint instead of a file, it's a good idea to set
-    a maximum age to the cache with the TTL argument: @st.cache_data(ttl='1d')
-    """
+    # Define features and target variable
+    X = df.drop(columns=["OrderStatus", "OrderStatus_Delivered"])  # Features
+    y = df["OrderStatus_Delivered"]  # Target variable
 
-    # Instead of a CSV on disk, you could read from an HTTP endpoint here too.
-    DATA_FILENAME = Path(__file__).parent/'data/gdp_data.csv'
-    raw_gdp_df = pd.read_csv(DATA_FILENAME)
+    # Split data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    MIN_YEAR = 1960
-    MAX_YEAR = 2022
+    # Model Selection
+    st.sidebar.header("Model Hyperparameters")
+    n_estimators = st.sidebar.slider("Number of Trees in Random Forest", 10, 200, step=10, value=100)
+    max_depth = st.sidebar.slider("Maximum Depth of Trees", 1, 20, step=1, value=10)
 
-    # The data above has columns like:
-    # - Country Name
-    # - Country Code
-    # - [Stuff I don't care about]
-    # - GDP for 1960
-    # - GDP for 1961
-    # - GDP for 1962
-    # - ...
-    # - GDP for 2022
-    #
-    # ...but I want this instead:
-    # - Country Name
-    # - Country Code
-    # - Year
-    # - GDP
-    #
-    # So let's pivot all those year-columns into two: Year and GDP
-    gdp_df = raw_gdp_df.melt(
-        ['Country Code'],
-        [str(x) for x in range(MIN_YEAR, MAX_YEAR + 1)],
-        'Year',
-        'GDP',
-    )
+    # Train model
+    model = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=42)
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    y_pred_proba = model.predict_proba(X_test)[:, 1]
 
-    # Convert years from string to integers
-    gdp_df['Year'] = pd.to_numeric(gdp_df['Year'])
+    # Display Evaluation Metrics
+    st.header("Model Performance Metrics")
+    st.write("Accuracy:", accuracy_score(y_test, y_pred))
+    st.write("Precision:", precision_score(y_test, y_pred))
+    st.write("Recall:", recall_score(y_test, y_pred))
+    st.write("F1 Score:", f1_score(y_test, y_pred))
+    st.write("AUC-ROC:", roc_auc_score(y_test, y_pred_proba))
 
-    return gdp_df
+    # Classification Report
+    st.subheader("Classification Report")
+    st.text(classification_report(y_test, y_pred))
 
-gdp_df = get_gdp_data()
+    # Confusion Matrix
+    st.subheader("Confusion Matrix")
+    conf_matrix = confusion_matrix(y_test, y_pred)
+    fig, ax = plt.subplots()
+    sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", ax=ax)
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+    st.pyplot(fig)
 
-# -----------------------------------------------------------------------------
-# Draw the actual page
+    # Feature Importances
+    st.subheader("Feature Importances")
+    feature_importances = pd.DataFrame({'feature': X.columns, 'importance': model.feature_importances_})
+    feature_importances = feature_importances.sort_values(by='importance', ascending=False)
+    st.bar_chart(feature_importances.set_index("feature"))
 
-# Set the title that appears at the top of the page.
-'''
-# :earth_americas: GDP dashboard
+    # Prediction on New Data
+    st.header("Predict on New Data")
+    input_data = {}
+    for feature in X.columns:
+        input_data[feature] = st.number_input(f"Input {feature}", value=0)
+    input_df = pd.DataFrame([input_data])
 
-Browse GDP data from the [World Bank Open Data](https://data.worldbank.org/) website. As you'll
-notice, the data only goes to 2022 right now, and datapoints for certain years are often missing.
-But it's otherwise a great (and did I mention _free_?) source of data.
-'''
-
-# Add some spacing
-''
-''
-
-min_value = gdp_df['Year'].min()
-max_value = gdp_df['Year'].max()
-
-from_year, to_year = st.slider(
-    'Which years are you interested in?',
-    min_value=min_value,
-    max_value=max_value,
-    value=[min_value, max_value])
-
-countries = gdp_df['Country Code'].unique()
-
-if not len(countries):
-    st.warning("Select at least one country")
-
-selected_countries = st.multiselect(
-    'Which countries would you like to view?',
-    countries,
-    ['DEU', 'FRA', 'GBR', 'BRA', 'MEX', 'JPN'])
-
-''
-''
-''
-
-# Filter the data
-filtered_gdp_df = gdp_df[
-    (gdp_df['Country Code'].isin(selected_countries))
-    & (gdp_df['Year'] <= to_year)
-    & (from_year <= gdp_df['Year'])
-]
-
-st.header('GDP over time', divider='gray')
-
-''
-
-st.line_chart(
-    filtered_gdp_df,
-    x='Year',
-    y='GDP',
-    color='Country Code',
-)
-
-''
-''
-
-
-first_year = gdp_df[gdp_df['Year'] == from_year]
-last_year = gdp_df[gdp_df['Year'] == to_year]
-
-st.header(f'GDP in {to_year}', divider='gray')
-
-''
-
-cols = st.columns(4)
-
-for i, country in enumerate(selected_countries):
-    col = cols[i % len(cols)]
-
-    with col:
-        first_gdp = first_year[first_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-        last_gdp = last_year[last_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-
-        if math.isnan(first_gdp):
-            growth = 'n/a'
-            delta_color = 'off'
+    if st.button("Predict Delivery Status"):
+        prediction = model.predict(input_df)
+        prediction_proba = model.predict_proba(input_df)[:, 1]
+        if prediction[0] == 1:
+            st.success(f"Prediction: On-Time (Confidence: {prediction_proba[0]:.2f})")
         else:
-            growth = f'{last_gdp / first_gdp:,.2f}x'
-            delta_color = 'normal'
+            st.error(f"Prediction: Delayed (Confidence: {1 - prediction_proba[0]:.2f})")
 
-        st.metric(
-            label=f'{country} GDP',
-            value=f'{last_gdp:,.0f}B',
-            delta=growth,
-            delta_color=delta_color
-        )
+
+    # Display Confusion Matrix
+    st.header("Confusion Matrix")
+    cm = confusion_matrix(y_test, y_pred)
+    st.write(cm)
