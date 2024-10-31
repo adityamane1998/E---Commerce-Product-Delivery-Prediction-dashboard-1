@@ -1,0 +1,6 @@
+OrderID,ProductID,Category,OrderDate,DeliveryDate,DeliveryTime,CustomerID,CustomerLocation,ShippingMethod,ProductWeight,ProductPrice,InventoryStatus,OrderStatus,WeatherConditions,TrafficConditions
+1,101,Electronics,2024-10-01,2024-10-05,4,C001,New York,Express,1.2,299.99,In Stock,Delivered,Sunny,Normal
+2,102,Clothing,2024-10-02,2024-10-08,6,C002,Los Angeles,Standard,0.5,49.99,In Stock,Delivered,Rainy,Heavy
+3,103,Home Goods,2024-10-03,2024-10-06,3,C003,Chicago,Standard,3.0,89.99,Out of Stock,Pending,Cloudy,Normal
+4,104,Electronics,2024-10-04,2024-10-10,6,C004,Miami,Express,1.5,199.99,In Stock,Delivered,Sunny,Normal
+5,105,Clothing,2024-10-05,2024-10-12,7,C005,Seattle,Standard,0.3,39.99,In Stock,Delivered,Rainy,Heavy
